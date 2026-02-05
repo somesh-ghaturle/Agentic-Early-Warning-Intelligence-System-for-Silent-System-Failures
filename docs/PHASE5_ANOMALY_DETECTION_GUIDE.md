@@ -53,51 +53,25 @@ PHASE 5 implements a multi-layered anomaly detection system that identifies sile
 
 ### Component Overview
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    PHASE 5 Architecture                     │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  ┌──────────────────┐  ┌──────────────────┐               │
-│  │  Residual        │  │  Isolation       │               │
-│  │  Detector        │  │  Forest          │               │
-│  │  (4 methods)     │  │  (multivariate)  │               │
-│  └────────┬─────────┘  └────────┬─────────┘               │
-│           │                     │                          │
-│           └──────────┬──────────┘                          │
-│                      │                                     │
-│              Anomaly Signals                               │
-│                      │                                     │
-│           ┌──────────▼──────────┐                          │
-│           │  Change-Point       │                          │
-│           │  Detector           │                          │
-│           │  (4 algorithms)     │                          │
-│           └──────────┬──────────┘                          │
-│                      │                                     │
-│              Change Points                                 │
-│                      │                                     │
-│           ┌──────────▼──────────┐                          │
-│           │  Degradation        │                          │
-│           │  Labeler            │                          │
-│           │  (fusion)           │                          │
-│           └──────────┬──────────┘                          │
-│                      │                                     │
-│         Degradation Labels & Scores                        │
-│                      │                                     │
-│           ┌──────────▼──────────┐                          │
-│           │  Early Warning      │                          │
-│           │  System             │                          │
-│           │  (risk scoring)     │                          │
-│           └──────────┬──────────┘                          │
-│                      │                                     │
-│              Warnings & Alerts                             │
-│                      │                                     │
-│           ┌──────────▼──────────┐                          │
-│           │  Maintenance        │                          │
-│           │  Dashboard / RAG    │                          │
-│           └─────────────────────┘                          │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph Detectors [Anomaly Detection]
+        RD[Residual Detector<br/>4 methods]
+        IF[Isolation Forest<br/>Multivariate]
+    end
+
+    Detectors --> Signals[Anomaly Signals]
+    
+    Signals --> CPD[Change-Point Detector<br/>4 algorithms]
+    CPD --> CP[Change Points]
+    
+    CP --> Labeler[Degradation Labeler<br/>Fusion]
+    Labeler --> Labels[Degradation Labels & Scores]
+    
+    Labels --> EWS[Early Warning System<br/>Risk Scoring]
+    EWS --> Alerts[Warnings & Alerts]
+    
+    Alerts --> Dashboard[Maintenance Dashboard / RAG]
 ```
 
 ### Data Flow

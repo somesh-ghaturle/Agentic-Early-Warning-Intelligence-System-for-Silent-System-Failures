@@ -92,142 +92,60 @@ AEWIS integrates three complementary technologies:
 
 ### 2.1 High-Level Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                    AGENTIC EARLY-WARNING SYSTEM                     │
-│                         (5-Layer Architecture)                       │
-└─────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph L1 [Layer 1: Data Ingestion]
+        S[Sensor Time-Series<br/>21 Sensors • 3 Op Settings]
+        D[Maintenance Docs<br/>Reports • Manuals]
+        FE[Feature Engineering<br/>347 Features]
+        DE[Document Embedding<br/>Sentence-BERT]
+        S --> FE
+        D --> DE
+    end
 
-┌─────────────────────────────────────────────────────────────────────┐
-│ LAYER 1: DATA INGESTION                                             │
-├─────────────────────────────────────────────────────────────────────┤
-│  ┌─────────────────────┐           ┌─────────────────────┐         │
-│  │ Sensor Time-Series  │           │ Maintenance Docs    │         │
-│  │ • 21 Sensors        │           │ • 500 Reports       │         │
-│  │ • 3 Op Settings     │           │ • 200 Manuals       │         │
-│  │ • RUL Labels        │           │ • 100 Procedures    │         │
-│  └──────────┬──────────┘           └──────────┬──────────┘         │
-│             │                                  │                     │
-│             ▼                                  ▼                     │
-│  ┌─────────────────────┐           ┌─────────────────────┐         │
-│  │ Feature Engineering │           │ Document Embedding  │         │
-│  │ • 347 Features      │           │ • Sentence-BERT     │         │
-│  │ • Rolling Stats     │           │ • 800D Vectors      │         │
-│  │ • EWMA, Fourier     │           │ • 512-token Chunks  │         │
-│  └──────────┬──────────┘           └──────────┬──────────┘         │
-└─────────────┼──────────────────────────────────┼───────────────────┘
-              │                                  │
-┌─────────────┼──────────────────────────────────┼───────────────────┐
-│ LAYER 2: BASELINE ML MODELS (Baseline 1: ML-Only)                   │
-├─────────────┴──────────────────────────────────┴───────────────────┤
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐             │
-│  │ XGBoost RUL  │  │ Isolation    │  │ PELT Change  │             │
-│  │ • 500 trees  │  │ Forest       │  │ Point Detect │             │
-│  │ • Depth: 8   │  │ • 200 trees  │  │ • L2 cost    │             │
-│  │ • LR: 0.05   │  │ • Contam: 5% │  │ • Penalty:10 │             │
-│  │ MAE: 13.7d   │  │ AUC: 0.94    │  │ Prec: 82%    │             │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘             │
-│         └────────────────┬─────────────────┘                       │
-│                          ▼                                          │
-│              Lead Time: 10.3 days (Baseline)                        │
-└─────────────────────────┬───────────────────────────────────────────┘
-                          │
-┌─────────────────────────┼───────────────────────────────────────────┐
-│ LAYER 3: RAG AUGMENTATION (Baseline 2: ML + RAG)                    │
-├─────────────────────────┴───────────────────────────────────────────┤
-│  ┌───────────────────────────────────────────────┐                 │
-│  │       FAISS VECTOR DATABASE (IVF1024_PQ8)     │                 │
-│  │  • 800 documents × 800D embeddings            │                 │
-│  │  • 1024 clusters for fast search              │                 │
-│  └───────────────────────┬───────────────────────┘                 │
-│                          ▼                                          │
-│  ┌───────────────────────────────────────────────┐                 │
-│  │      Hybrid Retrieval Strategy                │                 │
-│  │  • 70% Semantic (Cosine Similarity)           │                 │
-│  │  • 30% Keyword (BM25)                         │                 │
-│  │  • Top-K: 5 documents                         │                 │
-│  │  • Cross-encoder re-ranking                   │                 │
-│  └───────────────────────┬───────────────────────┘                 │
-│                          ▼                                          │
-│  ┌───────────────────────────────────────────────┐                 │
-│  │    LLM Explanation (GPT-3.5-turbo)            │                 │
-│  │  • Temperature: 0.3 (consistency)             │                 │
-│  │  • Max tokens: 300                            │                 │
-│  │  • Output: NL explanation + similar cases     │                 │
-│  └───────────────────────┬───────────────────────┘                 │
-│                          ▼                                          │
-│    Lead Time: 11.8d (+14.6%), Trust: 3.9/5.0                      │
-└─────────────────────────┬───────────────────────────────────────────┘
-                          │
-┌─────────────────────────┼───────────────────────────────────────────┐
-│ LAYER 4: MULTI-AGENT ORCHESTRATION (Baseline 3: AEWIS Full)        │
-├─────────────────────────┴───────────────────────────────────────────┤
-│                                                                      │
-│  ┌──────────────────────────────────────────────────────────┐      │
-│  │         LANGGRAPH STATE MACHINE                          │      │
-│  │  State = {sensor_data, rul, anomaly_score, docs,        │      │
-│  │           reasoning_trace, confidence, recommendations}  │      │
-│  └──────────────────────────────────────────────────────────┘      │
-│                                                                      │
-│  ┌───────────────────┐                                             │
-│  │ 1. MONITORING     │ → Analyze signals, detect anomalies         │
-│  │    AGENT          │   Change-point detection (PELT)             │
-│  └─────────┬─────────┘   Anomaly scoring (IF)                      │
-│            ▼                                                        │
-│  ┌───────────────────┐                                             │
-│  │ 2. REASONING      │ → Interpret patterns, apply rules           │
-│  │    AGENT          │   Confidence calibration (Platt)            │
-│  └─────────┬─────────┘   Escalation decision (threshold)           │
-│            ▼                                                        │
-│  ┌───────────────────┐                                             │
-│  │ 3. RETRIEVAL      │ → Dynamic RAG queries                       │
-│  │    AGENT          │   Query refinement (18% cases)              │
-│  └─────────┬─────────┘   Context extraction                        │
-│            ▼                                                        │
-│  ┌───────────────────┐                                             │
-│  │ 4. ACTION         │ → Generate recommendations                  │
-│  │    AGENT          │   Create explanation                        │
-│  └─────────┬─────────┘   Set escalation flag                       │
-│            ▼                                                        │
-│   Lead Time: 15.8d (+53.4%), Trust: 4.1/5.0, Escalation: 84%      │
-└────────────┬─────────────────────────────────────────────────────┘
-             │
-┌────────────┼─────────────────────────────────────────────────────┐
-│ LAYER 5: API & DEPLOYMENT                                          │
-├────────────┴─────────────────────────────────────────────────────┤
-│  ┌──────────────────────────────────────────────────────┐        │
-│  │            FASTAPI REST API (5 Endpoints)             │        │
-│  ├──────────────────────────────────────────────────────┤        │
-│  │  POST /predict  → RUL prediction (3 system variants) │        │
-│  │  POST /explain  → Detailed explanation + context     │        │
-│  │  GET  /health   → System status & component health   │        │
-│  │  GET  /metrics  → Performance stats (latency, tokens)│        │
-│  │  POST /drift    → Data drift detection (KS test)     │        │
-│  └──────────────────────┬───────────────────────────────┘        │
-│                         ▼                                          │
-│  ┌──────────────────────────────────────────────────────┐        │
-│  │         MLOPS INFRASTRUCTURE                         │        │
-│  │  • MLflow: Experiment tracking, model registry       │        │
-│  │  • Drift Detection: KS test for features             │        │
-│  │  • Performance Logging: Token usage, latency         │        │
-│  │  • Alerting: Email/Slack for degradation             │        │
-│  └──────────────────────────────────────────────────────┘        │
-│                                                                    │
-│  ┌──────────────────────────────────────────────────────┐        │
-│  │      DOCKER COMPOSE (7 Services)                     │        │
-│  │  1. api (8000)      5. prometheus (9090)             │        │
-│  │  2. mlflow (5000)   6. grafana (3000)                │        │
-│  │  3. postgres (5432) 7. nginx (80, 443)               │        │
-│  │  4. volumes (persistent storage)                     │        │
-│  └──────────────────────────────────────────────────────┘        │
-│                                                                    │
-│  ┌──────────────────────────────────────────────────────┐        │
-│  │         CLOUD DEPLOYMENT                             │        │
-│  │  • GCP Cloud Run: Serverless, 1-10 instances         │        │
-│  │  • AWS ECS Fargate: 2 vCPU, 4GB RAM                  │        │
-│  │  • Monitoring: Prometheus + Grafana                  │        │
-│  └──────────────────────────────────────────────────────┘        │
-└──────────────────────────────────────────────────────────────────┘
+    subgraph L2 [Layer 2: Baseline ML Models]
+        XGB[XGBoost RUL]
+        IF[Isolation Forest]
+        PELT[PELT Change-Point]
+        FE --> XGB
+        FE --> IF
+        FE --> PELT
+    end
+
+    subgraph L3 [Layer 3: RAG Augmentation]
+        VDB[(FAISS Vector DB)]
+        DE --> VDB
+        Hybrid[Hybrid Retrieval<br/>Semantic + Keyword]
+        LLM[LLM Explanation<br/>GPT-3.5-turbo]
+        VDB --> Hybrid
+        Hybrid --> LLM
+    end
+
+    subgraph L4 [Layer 4: Multi-Agent Orchestration]
+        MA[Monitoring Agent]
+        RA[Reasoning Agent]
+        RAG_A[Retrieval Agent]
+        AA[Action Agent]
+        
+        XGB & IF & PELT --> MA
+        MA --> RA
+        RA --> RAG_A
+        Hybrid -.-> RAG_A
+        RAG_A --> AA
+    end
+
+    subgraph L5 [Layer 5: API & Deployment]
+        API[FastAPI REST API]
+        MLOps[MLOps Infrastructure<br/>MLflow • Drift • Logging]
+        Docker[Docker Compose<br/>7 Services]
+        Cloud[Cloud Deployment<br/>GCP/AWS]
+        
+        AA --> API
+        API --> MLOps
+        MLOps --> Docker
+        Docker --> Cloud
+    end
+```
 
 Performance: 320ms latency | 850 tokens | $2.13/1K predictions
 ```
@@ -253,117 +171,77 @@ Performance: 320ms latency | 850 tokens | $2.13/1K predictions
 
 ### 3.1 Training Pipeline Flow
 
-```
-[NASA C-MAPSS Dataset] → [Preprocessing] → [Feature Engineering]
-         ↓                     ↓                    ↓
-    [218 engines]      [Normalization]      [347 features]
-    [21 sensors]       [Windowing]          [Rolling stats]
-    [RUL labels]       [RUL capping]        [EWMA, FFT]
-                            ↓
-                    ┌───────┴───────┐
-                    │               │
-         [Train 70%]│  [Val 15%]    │ [Test 15%]
-                    │               │
-         ┌──────────┴──────┐        │
-         │                 │        │
-    [XGBoost]      [Isolation F.]   │
-    [Optuna 500]   [PELT]           │
-         │                 │        │
-         └──────────┬──────┘        │
-                    │               │
-            [Model Artifacts] ──────┘
-                    │
-            [MLflow Registry]
-                    │
-         [Production Deployment]
+```mermaid
+flowchart TD
+    D[NASA C-MAPSS Dataset] --> P[Preprocessing]
+    P --> FE[Feature Engineering]
+    FE --> SPLIT
+    
+    subgraph SPLIT [Data Split]
+        Train[Train 70%]
+        Val[Val 15%]
+        Test[Test 15%]
+    end
+    
+    subgraph MODELS [Model Training]
+        XGB[XGBoost<br/>Optuna 500]
+        IF[Isolation Forest]
+        PELT[PELT Change-Point]
+    end
+    
+    Train --> MODELS
+    MODELS --> Artifacts[Model Artifacts]
+    Artifacts --> Registry[MLflow Registry]
+    Registry --> Deploy[Production Deployment]
 ```
 
 ### 3.2 Inference Pipeline Flow (AEWIS Full System)
 
-```
-[Sensor Data Input (21 sensors)]
-         │
-         ▼
-[Feature Engineering: 347 features in <10ms]
-         │
-    ┌────┴────┬────────────┬──────────────┐
-    │         │            │              │
-    ▼         ▼            ▼              ▼
-[XGBoost] [Isolation] [PELT]  [Historical Data]
- RUL pred  Anomaly    Change       ↓
-  13 days  score:0.78 points   [FAISS DB]
-    │         │            │        │
-    └─────────┴────────────┴────────┘
-               │
-               ▼
-    ┌──────────────────────┐
-    │  MONITORING AGENT    │
-    │  • Detect anomaly    │
-    │  • Flag change point │
-    └──────────┬───────────┘
-               ▼
-    ┌──────────────────────┐
-    │  REASONING AGENT     │
-    │  • Apply rule:       │
-    │    "Temp stable +    │
-    │     Speed drop =     │
-    │     Bearing issue"   │
-    │  • Confidence: 82%   │
-    └──────────┬───────────┘
-               ▼
-    ┌──────────────────────┐
-    │  RETRIEVAL AGENT     │
-    │  • Query: "HPC temp  │
-    │    spike + speed drop"│
-    │  • Retrieve 5 docs   │
-    │  • Refine query (18%)│
-    └──────────┬───────────┘
-               ▼
-    ┌──────────────────────┐
-    │  ACTION AGENT        │
-    │  • Synthesize        │
-    │  • Generate rec.:    │
-    │    1. Vibration test │
-    │    2. Bearing check  │
-    │  • Escalate: No      │
-    └──────────┬───────────┘
-               ▼
-    ┌──────────────────────┐
-    │  API RESPONSE        │
-    │  • RUL: 13 days      │
-    │  • Confidence: 82%   │
-    │  • Explanation: ...  │
-    │  • 3 Recommendations │
-    │  • Latency: 320ms    │
-    └──────────────────────┘
+```mermaid
+flowchart TD
+    S[Sensor Data Input (21 sensors)] --> FE[Feature Engineering<br/>347 features <10ms]
+    
+    subgraph BASE [Baseline Models]
+        FE --> XGB[XGBoost<br/>RUL: 13 days]
+        FE --> IF[Isolation Forest<br/>Anomaly: 0.78]
+        FE --> PELT[PELT<br/>Change Points]
+        Hist[Historical Data] --> FAISS[FAISS DB]
+    end
+    
+    subgraph AGENTS [LangGraph Agents]
+        MA[Monitoring Agent<br/>Detect anomaly • Flag change points]
+        RA[Reasoning Agent<br/>Apply rules • Calibrate confidence]
+        RAG_A[Retrieval Agent<br/>Context Retrieval • Query Refinement]
+        AA[Action Agent<br/>Synthesize • Recommend • Escalate]
+    end
+    
+    XGB & IF & PELT & FAISS --> MA
+    MA --> RA --> RAG_A --> AA
+    AA --> API[API Response<br/>RUL • Confidence • Explanation • Recommendations]
 ```
 
 ### 3.3 Deployment Architecture
 
-```
-                    [User/Client]
-                         │
-                         ▼
-                   [Load Balancer]
-                         │
-            ┌────────────┼────────────┐
-            ▼            ▼            ▼
-      [API Instance1][API-2][API-3]  (Autoscaling 1-10)
-            │
-    ┌───────┴────────┬─────────┬──────────┐
-    │                │         │          │
-    ▼                ▼         ▼          ▼
-[MLflow]      [Postgres]  [FAISS]  [Prometheus]
-[Port 5000]   [Port 5432]  [Index] [Port 9090]
-    │                │                    │
-    └────────────────┴────────────────────┘
-                     │
-                     ▼
-            [Persistent Volumes]
-         (mlflow-artifacts, postgres-data)
-                     │
-                     ▼
-            [Cloud Storage: S3/GCS]
+```mermaid
+flowchart TD
+    User[User/Client] --> LB[Load Balancer]
+    LB --> API[API Cluster<br/>Autoscaling 1-10 instances]
+    
+    subgraph SERVICES [Backend Services]
+        MLflow[MLflow<br/>5000]
+        PG[Postgres<br/>5432]
+        FAISS[FAISS Index]
+        Prom[Prometheus<br/>9090]
+    end
+    
+    API --> SERVICES
+    
+    subgraph STORAGE [Persistent Storage]
+        PV[Persistent Volumes]
+        Cloud[Cloud Storage<br/>S3/GCS]
+    end
+    
+    SERVICES --> PV --> Cloud
 ```
 
 ---

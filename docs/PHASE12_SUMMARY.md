@@ -39,40 +39,51 @@
 Created 3 comprehensive flow diagrams:
 
 #### A. Training Pipeline Flow
-```
-[Data] → [Preprocessing] → [Features] → [Train/Val/Test]
-                                              ↓
-                                    [3 Models + RAG + Agents]
-                                              ↓
-                                       [MLflow Registry]
-                                              ↓
-                                    [Production Deployment]
+
+```mermaid
+flowchart TD
+    Data[Data] --> Prep[Preprocessing] --> Feat[Features] --> Split[Train/Val/Test]
+    Split --> Models[3 Models + RAG + Agents]
+    Models --> Reg[MLflow Registry]
+    Reg --> Deploy[Production Deployment]
 ```
 
 #### B. Inference Pipeline Flow (AEWIS)
-```
-[Sensor Input] → [Feature Eng 347 features]
-                        ↓
-    ┌───────────────────┴───────────────────┐
-    │   [XGBoost]  [IF]  [PELT]  [FAISS]   │
-    └───────────────────┬───────────────────┘
-                        ↓
-            [4 Agents: Mon→Rea→Ret→Act]
-                        ↓
-                [API Response 320ms]
+
+```mermaid
+flowchart TD
+    Input[Sensor Input] --> Feat[Feature Eng 347 features]
+    
+    subgraph Models
+        Feat --> XGB[XGBoost]
+        Feat --> IF[IF]
+        Feat --> PELT[PELT]
+        Feat --> FAISS[FAISS]
+    end
+    
+    subgraph Agents
+        XGB & IF & PELT & FAISS --> Mon[Monitoring]
+        Mon --> Rea[Reasoning]
+        Rea --> Ret[Retrieval]
+        Ret --> Act[Action]
+    end
+    
+    Act --> Resp[API Response 320ms]
 ```
 
 #### C. Deployment Architecture
-```
-[Users] → [Load Balancer] → [API Instances 1-10]
-                                    ↓
-          ┌─────────────────────────┼─────────────┐
-          ↓                         ↓             ↓
-      [MLflow]               [Postgres]      [Prometheus]
-       [5000]                  [5432]          [9090]
-          └────────────────────┬────────────────┘
-                               ↓
-                      [Persistent Volumes]
+
+```mermaid
+flowchart TD
+    Users --> LB[Load Balancer] --> API[API Instances 1-10]
+    
+    subgraph Services
+        API --> MLflow[MLflow 5000]
+        API --> PG[Postgres 5432]
+        API --> Prom[Prometheus 9090]
+    end
+    
+    Services --> Vol[Persistent Volumes]
 ```
 
 ### 3. Comprehensive Results Summary

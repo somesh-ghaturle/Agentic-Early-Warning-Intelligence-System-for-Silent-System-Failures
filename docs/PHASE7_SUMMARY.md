@@ -33,75 +33,68 @@ The system includes built-in confidence thresholding and abstention logic to esc
 
 ### System Flow
 
-```
-Real-time Sensor Data (14 sensors)
-         ↓
-    Monitoring Agent
-    ├─ ML inference → RUL prediction
-    ├─ Anomaly detection → Sensor anomalies
-    ├─ Drift detection → Distribution changes
-    └─ Output: MonitoringReport with confidence
-         ↓
-    Retrieval Agent
-    ├─ Query VectorDB
-    ├─ Find similar historical failures
-    ├─ Filter by sensor patterns
-    └─ Output: RetrievalResult with citations
-         ↓
-    Reasoning Agent
-    ├─ Synthesize evidence
-    ├─ Calculate risk score
-    ├─ Confidence thresholding (60%)
-    ├─ Abstention logic
-    └─ Output: ReasoningResult with explanations
-         ↓
-    [Confidence < 60%?] ──→ Escalate to Human
-         │                  (Abstention)
-         ↓ (No)
-    Action Agent
-    ├─ Generate recommendations
-    ├─ Escalation logic (80% threshold)
-    ├─ Risk mitigation scoring
-    └─ Output: ActionPlan
-         ↓
-    [Escalate?] ──→ Escalate to Human
-         ↓ (No)
-    Autonomous Action
+```mermaid
+flowchart TD
+    Sensor[Real-time Sensor Data<br/>14 sensors] --> MA[Monitoring Agent]
+    
+    subgraph MON [Monitoring Agent]
+        ML[ML inference • RUL prediction]
+        AD[Anomaly detection • Sensor anomalies]
+        DD[Drift detection • Distribution changes]
+        Out1[Output: MonitoringReport with confidence]
+    end
+    
+    MA --> MON
+    MON --> RA[Retrieval Agent]
+    
+    subgraph RET [Retrieval Agent]
+        Query[Query VectorDB]
+        Sim[Find similar historical failures]
+        Filter[Filter by sensor patterns]
+        Out2[Output: RetrievalResult with citations]
+    end
+    
+    RA --> RET
+    RET --> REA[Reasoning Agent]
+    
+    subgraph REAS [Reasoning Agent]
+        Syn[Synthesize evidence]
+        Risk[Calculate risk score]
+        Conf[Confidence thresholding 60%]
+        Abs[Abstention logic]
+        Out3[Output: ReasoningResult with explanations]
+    end
+    
+    REA --> REAS
+    REAS -- "Confidence < 60%" --> ESC1[Escalate to Human<br/>Abstention]
+    REAS -- "Confidence >= 60%" --> AA[Action Agent]
+    
+    subgraph ACT [Action Agent]
+        Gen[Generate recommendations]
+        EscL[Escalation logic 80% threshold]
+        Mit[Risk mitigation scoring]
+        Out4[Output: ActionPlan]
+    end
+    
+    AA --> ACT
+    ACT -- "Escalate?" --> ESC2[Escalate to Human]
+    ACT -- "No" --> AUTO[Autonomous Action]
 ```
 
 ### Agent Interactions
 
-```
-┌──────────────┐
-│  Monitoring  │ → Anomaly Score, RUL, Confidence
-│    Agent     │
-└──────────────┘
-        │
-        ↓
-┌──────────────┐
-│ Retrieval    │ → Similar Failures, Citations, Confidence
-│    Agent     │
-└──────────────┘
-        │
-        ↓
-┌──────────────┐
-│  Reasoning   │ → Risk Explanation, Abstention Flag, Confidence
-│    Agent     │
-└──────────────┘
-        │
-        ├─→ [Abstain] ──→ ESCALATE
-        │
-        ↓ [Confident]
-┌──────────────┐
-│   Action     │ → Recommendations, Escalation Flag, Confidence
-│    Agent     │
-└──────────────┘
-        │
-        ├─→ [Escalate] ──→ ESCALATE
-        │
-        ↓ [Autonomous]
-   Proceed with
-   Recommended Action
+```mermaid
+flowchart TD
+    MA[Monitoring Agent] -->|Anomaly Score, RUL, Confidence| RA[Retrieval Agent]
+    RA -->|Similar Failures, Citations, Confidence| REA[Reasoning Agent]
+    REA -->|Risk Explanation, Abstention Flag, Confidence| DECISION{Confidence < 60% ?}
+    
+    DECISION -- Yes --> ESC[ESCALATE<br/>Abstain]
+    DECISION -- No --> AA[Action Agent]
+    
+    AA -->|Recommendations, Escalation Flag, Confidence| FINAL{Escalate ?}
+    FINAL -- Yes --> ESC
+    FINAL -- No --> ACTION[Autonomous Action<br/>Proceed with Recommended Action]
 ```
 
 ---

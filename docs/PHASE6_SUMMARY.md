@@ -26,32 +26,40 @@ PHASE 6 implements a complete Retrieval-Augmented Generation (RAG) pipeline for 
 
 ### System Flow
 
-```
-PHASE 5 Degradation Data
-         ↓
-   Document Creation
-         ↓
-  Document Chunker
-    ├─ Fixed-size chunks
-    ├─ Sentence-based chunks
-    ├─ Paragraph-based chunks
-    └─ Semantic chunks
-         ↓
-      Embedder
-    (Sentence-Transformers)
-         ↓
-   Vector Store (FAISS)
-    ├─ Flat index (exact)
-    ├─ HNSW (approximate)
-    └─ IVFFlat (clustered)
-         ↓
-     Retriever
-    ├─ Similarity search
-    ├─ Metadata filtering
-    ├─ Citation tracking
-    └─ Re-ranking (optional)
-         ↓
-  Query Results + Citations
+```mermaid
+flowchart TD
+    D[PHASE 5 Degradation Data] --> DC[Document Creation] --> CHUNK[Document Chunker]
+    
+    subgraph CHUNKING [Chunking Strategies]
+        Fixed[Fixed-size chunks]
+        Sent[Sentence-based chunks]
+        Para[Paragraph-based chunks]
+        Sem[Semantic chunks]
+    end
+    
+    CHUNK --> CHUNKING
+    CHUNKING --> EMB[Embedder<br/>Sentence-Transformers]
+    
+    EMB --> VS[Vector Store FAISS]
+    
+    subgraph INDEX [Index Types]
+        Flat[Flat index exact]
+        HNSW[HNSW approximate]
+        IVF[IVFFlat clustered]
+    end
+    
+    VS --> INDEX
+    INDEX --> RET[Retriever]
+    
+    subgraph RETRIEVAL [Retrieval Features]
+        Sim[Similarity search]
+        Meta[Metadata filtering]
+        Cit[Citation tracking]
+        Rank[Re-ranking optional]
+    end
+    
+    RET --> RETRIEVAL
+    RETRIEVAL --> RES[Query Results + Citations]
 ```
 
 ### Module Structure
