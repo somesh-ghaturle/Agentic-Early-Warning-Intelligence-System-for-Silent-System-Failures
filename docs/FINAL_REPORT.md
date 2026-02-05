@@ -175,13 +175,14 @@ Performance: 320ms latency | 850 tokens | $2.13/1K predictions
 flowchart TD
     D[NASA C-MAPSS Dataset] --> P[Preprocessing]
     P --> FE[Feature Engineering]
-    FE --> SPLIT
     
     subgraph SPLIT [Data Split]
         Train[Train 70%]
         Val[Val 15%]
         Test[Test 15%]
     end
+
+    FE --> Train & Val & Test
     
     subgraph MODELS [Model Training]
         XGB[XGBoost<br/>Optuna 500]
@@ -189,8 +190,8 @@ flowchart TD
         PELT[PELT Change-Point]
     end
     
-    Train --> MODELS
-    MODELS --> Artifacts[Model Artifacts]
+    Train --> XGB & IF & PELT
+    XGB & IF & PELT --> Artifacts[Model Artifacts]
     Artifacts --> Registry[MLflow Registry]
     Registry --> Deploy[Production Deployment]
 ```
@@ -234,14 +235,15 @@ flowchart TD
         Prom[Prometheus<br/>9090]
     end
     
-    API --> SERVICES
+    API --> MLflow & PG & FAISS & Prom
     
     subgraph STORAGE [Persistent Storage]
         PV[Persistent Volumes]
         Cloud[Cloud Storage<br/>S3/GCS]
     end
     
-    SERVICES --> PV --> Cloud
+    MLflow & PG & FAISS & Prom --> PV
+    PV --> Cloud
 ```
 
 ---

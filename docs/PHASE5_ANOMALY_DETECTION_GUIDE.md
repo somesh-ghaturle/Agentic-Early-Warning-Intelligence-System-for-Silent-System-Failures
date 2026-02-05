@@ -60,7 +60,7 @@ flowchart TD
         IF[Isolation Forest<br/>Multivariate]
     end
 
-    Detectors --> Signals[Anomaly Signals]
+    RD & IF --> Signals[Anomaly Signals]
     
     Signals --> CPD[Change-Point Detector<br/>4 algorithms]
     CPD --> CP[Change Points]

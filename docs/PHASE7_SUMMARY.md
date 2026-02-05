@@ -42,20 +42,22 @@ flowchart TD
         AD[Anomaly detection • Sensor anomalies]
         DD[Drift detection • Distribution changes]
         Out1[Output: MonitoringReport with confidence]
+        ML & AD & DD --> Out1
     end
     
-    MA --> MON
-    MON --> RA[Retrieval Agent]
+    MA --> ML & AD & DD
+    Out1 --> RA[Retrieval Agent]
     
     subgraph RET [Retrieval Agent]
         Query[Query VectorDB]
         Sim[Find similar historical failures]
         Filter[Filter by sensor patterns]
         Out2[Output: RetrievalResult with citations]
+        Query --> Sim --> Filter --> Out2
     end
     
-    RA --> RET
-    RET --> REA[Reasoning Agent]
+    RA --> Query
+    Out2 --> REA[Reasoning Agent]
     
     subgraph REAS [Reasoning Agent]
         Syn[Synthesize evidence]
@@ -63,22 +65,24 @@ flowchart TD
         Conf[Confidence thresholding 60%]
         Abs[Abstention logic]
         Out3[Output: ReasoningResult with explanations]
+        Syn --> Risk --> Conf --> Abs --> Out3
     end
     
-    REA --> REAS
-    REAS -- "Confidence < 60%" --> ESC1[Escalate to Human<br/>Abstention]
-    REAS -- "Confidence >= 60%" --> AA[Action Agent]
+    REA --> Syn
+    Out3 -- "Confidence < 60%" --> ESC1[Escalate to Human<br/>Abstention]
+    Out3 -- "Confidence >= 60%" --> AA[Action Agent]
     
     subgraph ACT [Action Agent]
         Gen[Generate recommendations]
         EscL[Escalation logic 80% threshold]
         Mit[Risk mitigation scoring]
         Out4[Output: ActionPlan]
+        Gen --> EscL --> Mit --> Out4
     end
     
-    AA --> ACT
-    ACT -- "Escalate?" --> ESC2[Escalate to Human]
-    ACT -- "No" --> AUTO[Autonomous Action]
+    AA --> Gen
+    Out4 -- "Escalate?" --> ESC2[Escalate to Human]
+    Out4 -- "No" --> AUTO[Autonomous Action]
 ```
 
 ### Agent Interactions

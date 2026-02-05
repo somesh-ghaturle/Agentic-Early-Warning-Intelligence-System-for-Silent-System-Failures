@@ -37,8 +37,8 @@ flowchart TD
         Sem[Semantic chunks]
     end
     
-    CHUNK --> CHUNKING
-    CHUNKING --> EMB[Embedder<br/>Sentence-Transformers]
+    CHUNK --> Fixed & Sent & Para & Sem
+    Fixed & Sent & Para & Sem --> EMB[Embedder<br/>Sentence-Transformers]
     
     EMB --> VS[Vector Store FAISS]
     
@@ -48,8 +48,8 @@ flowchart TD
         IVF[IVFFlat clustered]
     end
     
-    VS --> INDEX
-    INDEX --> RET[Retriever]
+    VS --> Flat & HNSW & IVF
+    Flat & HNSW & IVF --> RET[Retriever]
     
     subgraph RETRIEVAL [Retrieval Features]
         Sim[Similarity search]
@@ -58,8 +58,8 @@ flowchart TD
         Rank[Re-ranking optional]
     end
     
-    RET --> RETRIEVAL
-    RETRIEVAL --> RES[Query Results + Citations]
+    RET --> Sim & Meta & Cit & Rank
+    Sim & Meta & Cit & Rank --> RES[Query Results + Citations]
 ```
 
 ### Module Structure
