@@ -51,16 +51,24 @@ flowchart TD
         Test["Test 15%"]
     end
 
-    FE --> Train & Val & Test
+    FE --> Train
+    FE --> Val
+    FE --> Test
     
     subgraph MODELS [Model Training]
-        XGB["XGBoost<br/>Optuna 500"]
+        XGB["XGBoost<br>Optuna 500"]
         IF["Isolation Forest"]
         PELT["PELT Change-Point"]
     end
     
-    Train --> XGB & IF & PELT
-    XGB & IF & PELT --> Artifacts["Model Artifacts"]
+    Train --> XGB
+    Train --> IF
+    Train --> PELT
+
+    XGB --> Artifacts["Model Artifacts"]
+    IF --> Artifacts
+    PELT --> Artifacts
+
     Artifacts --> Registry["MLflow Registry"]
     Registry --> Deploy["Production Deployment"]
 ```
