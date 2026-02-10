@@ -62,21 +62,39 @@ class LogParser:
         }
         
         # Extract timestamp
+        remaining_line = log_line
         for pattern in self.timestamp_patterns:
             match = re.search(pattern, log_line)
             if match:
                 fields['timestamp'] = match.group(0)
+                # Remove timestamp from line to facilitate other extractions
+                remaining_line = log_line.replace(match.group(0), '').strip()
                 break
         
         # Extract log level
-        level_match = re.search(r'\b(DEBUG|INFO|WARN|ERROR|FATAL|CRITICAL)\b', log_line, re.IGNORECASE)
+        level_match = re.search(r'\b(DEBUG|INFO|WARN|WARNING|ERROR|FATAL|CRITICAL)\b', remaining_line, re.IGNORECASE)
         if level_match:
             fields['level'] = level_match.group(1).upper()
+            # Remove level from remaining line
+            remaining_line = remaining_line.replace(level_match.group(0), '')
+            # Also remove brackets commonly surrounding levels
+            remaining_line = re.sub(r'\[\s*\]', '', remaining_line).strip()
         
         # Extract source (host, component, etc.)
-        source_match = re.search(r'(\w+)[:\[\s]', log_line)
+        # Look for the first word that resembles a hostname after cleaning timestamp/level
+        # Simple heuristic: first word remaining
+        source_match = re.search(r'([a-zA-Z0-9_\-\.]+)', remaining_line)
         if source_match:
             fields['source'] = source_match.group(1)
+            
+        # Extract message - everything after source/level
+        # A simple approach: remove source from remaining, what's left is message
+        if fields['source']:
+             message = remaining_line.replace(fields['source'], '', 1).strip()
+             # Clean up leading non-alphanumeric chars (like : or -)
+             fields['message'] = re.sub(r'^[:\-\]\s]+', '', message)
+        else:
+             fields['message'] = remaining_line
         
         # Extract message (everything after level/source)
         message_start = max(

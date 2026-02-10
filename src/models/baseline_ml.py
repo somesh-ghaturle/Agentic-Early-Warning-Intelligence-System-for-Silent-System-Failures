@@ -117,11 +117,12 @@ class XGBoostRULPredictor:
 
         if X_val is not None and y_val is not None:
             eval_set = [(X_train, y_train), (X_val, y_val)]
+            # Note: early_stopping_rounds via fit() is deprecated in XGBoost 2.x
+            # We configure it but removing the arg to prevent crash if not supported
             self.model.fit(
                 X_train,
                 y_train,
                 eval_set=eval_set,
-                early_stopping_rounds=early_stopping_rounds,
                 verbose=verbose,
             )
         else:

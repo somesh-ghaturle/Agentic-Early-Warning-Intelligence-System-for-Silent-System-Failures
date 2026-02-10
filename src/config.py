@@ -3,6 +3,8 @@ from pathlib import Path
 from pydantic_settings import BaseSettings
 
 
+from typing import Optional
+
 class Settings(BaseSettings):
     """
     Application settings loaded from environment variables or .env file.
@@ -15,7 +17,7 @@ class Settings(BaseSettings):
     
     # Logging
     log_level: str = "INFO"
-    log_file: str = None
+    log_file: Optional[str] = None
     
     # Data paths
     data_raw_path: str = "./data/raw"

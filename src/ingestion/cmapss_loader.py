@@ -81,7 +81,7 @@ class CMAPSSDataLoader:
         
         train_df = pd.read_csv(
             train_path,
-            sep=' ',
+            sep=r'\s+',
             header=None,
             names=col_names,
             dtype={col: np.float32 for col in col_names}
@@ -94,7 +94,7 @@ class CMAPSSDataLoader:
         
         test_df = pd.read_csv(
             test_path,
-            sep=' ',
+            sep=r'\s+',
             header=None,
             names=col_names,
             dtype={col: np.float32 for col in col_names}
@@ -107,7 +107,7 @@ class CMAPSSDataLoader:
         
         rul_test = pd.read_csv(
             rul_path,
-            sep=' ',
+            sep=r'\s+',
             header=None,
             names=['RUL'],
             dtype=np.float32

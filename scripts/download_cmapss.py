@@ -30,20 +30,32 @@ logging.basicConfig(
 
 def check_kaggle_setup() -> bool:
     """Check if Kaggle API is properly configured."""
+    # Check for file
     kaggle_json = Path.home() / '.kaggle' / 'kaggle.json'
-    
-    if not kaggle_json.exists():
-        logger.error(
-            "Kaggle API credentials not found at ~/.kaggle/kaggle.json\n"
-            "Please:\n"
-            "1. Go to https://www.kaggle.com/settings/account\n"
-            "2. Click 'Create New API Token' (downloads kaggle.json)\n"
-            "3. Move it to ~/.kaggle/kaggle.json\n"
-            "4. Run: chmod 600 ~/.kaggle/kaggle.json"
-        )
-        return False
-    
-    return True
+    if kaggle_json.exists():
+        return True
+        
+    # Check for environment variables
+    # Standard Kaggle
+    if 'KAGGLE_USERNAME' in os.environ and 'KAGGLE_KEY' in os.environ:
+        return True
+        
+    # Check for KAGGLE_API_TOKEN (User provided format)
+    if 'KAGGLE_API_TOKEN' in os.environ:
+         # Note: The standard kaggle library might not support this directly unless it's a new feature,
+         # but we should allow the script to proceed to attempt authentication.
+        return True
+
+    logger.error(
+        "Kaggle API credentials not found.\n"
+        "Checked:\n"
+        "  1. File: ~/.kaggle/kaggle.json\n"
+        "  2. Env: KAGGLE_USERNAME & KAGGLE_KEY\n"
+        "  3. Env: KAGGLE_API_TOKEN\n"
+        "\n"
+        "Please configure one of these methods."
+    )
+    return False
 
 
 def download_cmapss_dataset(output_dir: str = "./data/raw/CMAPSS") -> bool:
